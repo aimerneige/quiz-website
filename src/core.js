@@ -1,3 +1,4 @@
+import {tr} from './i18n.js';
 export const uid = () => globalThis.crypto?.randomUUID?.() || `q-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 export function parseTags(value) {
   if (typeof value === 'string' && value.trim().startsWith('[')) {
@@ -7,16 +8,16 @@ export function parseTags(value) {
   return [...new Set(a.map(t=>String(t).trim()).filter(Boolean))];
 }
 export function normalizeQuestion(row) {
-  if (!row || typeof row !== 'object' || Array.isArray(row)) throw Error('题目必须是一个对象');
+  if (!row || typeof row !== 'object' || Array.isArray(row)) throw Error(tr("题目必须是一个对象"));
   const get=(...keys)=>{for (const k of keys) if (row[k] != null) return row[k];return '';};
   const question=String(get('question','题目','问题')).trim();
   const answer=String(get('answer','答案')).trim();
   const hint=String(get('hint','提示')).trim();
   const tags=parseTags(get('tags','标签'));
-  if (!question) throw Error('缺少题目');
-  if (!answer) throw Error('缺少答案');
-  if (question.length>10000 || answer.length>30000 || hint.length>30000) throw Error('题目最多 10,000 字，提示和答案最多 30,000 字');
-  if (tags.length>20 || tags.some(t=>t.length>40)) throw Error('每题最多 20 个标签，每个标签最多 40 字');
+  if (!question) throw Error(tr("缺少题目"));
+  if (!answer) throw Error(tr("缺少答案"));
+  if (question.length>10000 || answer.length>30000 || hint.length>30000) throw Error(tr("题目最多 10,000 字，提示和答案最多 30,000 字"));
+  if (tags.length>20 || tags.some(t=>t.length>40)) throw Error(tr("每题最多 20 个标签，每个标签最多 40 字"));
   return {id:uid(), question, hint, answer, tags};
 }
 export function parseCSV(input) {
@@ -31,26 +32,26 @@ export function parseCSV(input) {
       row.push(cell);cell='';closed=false;
       if(c!==',') {if(c==='\r'&&text[i+1]==='\n')i++;if(row.some(v=>v.trim()))rows.push(row);row=[];}
     } else if(c==='"') {
-      if(cell || closed)throw Error('CSV 引号格式不正确，请将含逗号或换行的内容放在双引号内');
+      if(cell || closed)throw Error(tr("CSV 引号格式不正确，请将含逗号或换行的内容放在双引号内"));
       quoted=true;
-    } else {if(closed && c.trim())throw Error('CSV 双引号后有意外内容');if(!closed)cell+=c;}
+    } else {if(closed && c.trim())throw Error(tr("CSV 双引号后有意外内容"));if(!closed)cell+=c;}
   }
-  if(quoted)throw Error('CSV 中有未闭合的双引号');
+  if(quoted)throw Error(tr("CSV 中有未闭合的双引号"));
   row.push(cell);if(row.some(v=>v.trim()))rows.push(row);
-  if(!rows.length)throw Error('文件内容为空');
+  if(!rows.length)throw Error(tr("文件内容为空"));
   const headers=rows.shift().map(h=>h.trim().toLowerCase());
-  if(!headers.some(h=>['question','题目','问题'].includes(h))||!headers.some(h=>['answer','答案'].includes(h)))throw Error('CSV 首行需包含 question / answer，或“题目 / 答案”列');
+  if(!headers.some(h=>['question','题目','问题'].includes(h))||!headers.some(h=>['answer','答案'].includes(h)))throw Error(tr("CSV 首行需包含 question / answer，或“题目 / 答案”列"));
   return rows.map((values,index)=>{
-    if(values.length>headers.length)throw Error(`CSV 第 ${index+1} 条记录的列数超过表头，请用双引号包住内容中的逗号`);
+    if(values.length>headers.length)throw Error(`${tr('CSV 第 {row} 条记录的列数超过表头，请用双引号包住内容中的逗号',{row:index+1})}`);
     return Object.fromEntries(headers.map((h,i)=>[h,values[i]||'']));
   });
 }
 export function readImport(text, format) {
   let rows;
   if(format==='csv')rows=parseCSV(text);
-  else {let parsed;try{parsed=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw Error('JSON 格式无效，请检查逗号、引号和括号');}rows=Array.isArray(parsed)?parsed:parsed?.questions;if(!Array.isArray(rows))throw Error('JSON 应为题目数组，或包含 questions 数组的对象');}
-  if(rows.length>10000)throw Error('单次最多导入 10,000 道题，请分批导入');
-  if(!rows.length)throw Error('文件中没有题目');
+  else {let parsed;try{parsed=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw Error(tr("JSON 格式无效，请检查逗号、引号和括号"));}rows=Array.isArray(parsed)?parsed:parsed?.questions;if(!Array.isArray(rows))throw Error(tr("JSON 应为题目数组，或包含 questions 数组的对象"));}
+  if(rows.length>10000)throw Error(tr("单次最多导入 10,000 道题，请分批导入"));
+  if(!rows.length)throw Error(tr("文件中没有题目"));
   const valid=[],errors=[];
   rows.forEach((row,i)=>{try{valid.push(normalizeQuestion(row));}catch(e){errors.push({row:i+1,message:e.message});}});
   return {valid,errors,total:rows.length};
