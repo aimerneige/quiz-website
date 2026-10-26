@@ -28,7 +28,7 @@ npm run dev
 npm run build
 ```
 
-构建会先清空 `dist/`，再将 `src/` 中的全部文件复制到 `dist/`。现有代码可直接由浏览器执行，因此无需转译或打包依赖。`dist/` 已被 Git 忽略，可以随时删除后重新构建；不要直接在其中修改代码。
+构建会先清空 `dist/`，再依次将 `src/` 和 `public/` 中的全部文件复制到 `dist/`。`public/CNAME` 会复制到 `dist/CNAME`，用于 GitHub Pages 自定义域名；修改域名时请编辑 `public/CNAME`。现有代码可直接由浏览器执行，因此无需转译或打包依赖。`dist/` 已被 Git 忽略，可以随时删除后重新构建；不要直接在其中修改代码。
 
 将 `dist/` 内的全部文件上传到静态服务器的网站目录，保持文件之间的相对路径即可。部署时不需要上传 `src/`、`scripts/`、`tests/` 或 `package.json`。
 
@@ -59,6 +59,7 @@ python3 -m http.server 8000 --directory dist
 | `src/core.js` | 导入导出、CSV 处理、标签筛选和随机抽题 |
 | `src/data.js` | 首次访问时的示例题 |
 | `src/icon.svg` | 网站图标 |
+| `public/CNAME` | GitHub Pages 自定义域名，构建时复制到部署目录根目录 |
 | `scripts/dev.mjs` | 直接预览 `src/` 的本地开发服务器 |
 | `scripts/build.mjs` | 清理并生成 `dist/` 的构建脚本 |
 | `tests/core.test.mjs` | 核心逻辑测试 |
