@@ -61,7 +61,7 @@ export function mergeQuestions(current,incoming,replace=false) {
   for(const q of incoming){const key=signature(q);if(seen.has(key)){duplicates++;continue;}seen.add(key);result.push({...q,id:uid()});}
   return {questions:result,added:result.length-(replace?0:current.length),duplicates};
 }
-export function exportJSON(questions) {return JSON.stringify({version:1,name:'知间题库',exportedAt:new Date().toISOString(),questions},null,2);}
+export function exportJSON(questions) {return JSON.stringify({version:1,name:'quiz题库',exportedAt:new Date().toISOString(),questions},null,2);}
 export function exportCSV(questions) {
   const escape=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   return '\uFEFF'+['question,hint,answer,tags',...questions.map(q=>[q.question,q.hint,q.answer,JSON.stringify(q.tags)].map(escape).join(','))].join('\r\n');
