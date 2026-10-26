@@ -12,13 +12,13 @@ npm test
 
 测试直接加载 `src/` 中的模块，无需先构建。
 
-开发时修改 `src/` 中的文件。如果本机已安装 Python 3，可在项目根目录启动预览：
+开发时修改 `src/` 中的文件，在项目根目录启动预览：
 
 ```bash
-python3 -m http.server 8000 --directory src
+npm run dev
 ```
 
-然后在浏览器打开 `http://localhost:8000`。页面使用 ES modules，请通过 HTTP(S) 打开，不要直接双击 `index.html`。
+然后在浏览器打开 `http://localhost:8000`。开发服务器直接读取 `src/`，无需先构建；修改文件后刷新浏览器即可。页面使用 ES modules，请通过 HTTP(S) 打开，不要直接双击 `index.html`。
 
 ## 构建和手动部署
 
@@ -56,6 +56,7 @@ python3 -m http.server 8000 --directory dist
 | `src/core.js` | 导入导出、CSV 处理、标签筛选和随机抽题 |
 | `src/data.js` | 首次访问时的示例题 |
 | `src/icon.svg` | 网站图标 |
+| `scripts/dev.mjs` | 直接预览 `src/` 的本地开发服务器 |
 | `scripts/build.mjs` | 清理并生成 `dist/` 的构建脚本 |
 | `tests/core.test.mjs` | 核心逻辑测试 |
 | `dist/` | 可删除、可重新生成的部署产物，不提交到 Git |
