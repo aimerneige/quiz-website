@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f8f2">
+  <meta name="description" content="知间，一个安静的本地答题空间。管理自己的题库，按标签随机练习，随时查看提示与答案。支持 JSON 和 CSV 导入导出。">
+  <title>知间 · 本地答题空间</title>
+  <script>try{const t=localStorage.getItem('zhijian-theme')||'system';document.documentElement.dataset.theme=t==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t}catch{}</script>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳至主内容</a>
+  <div id="app"></div>
+  <div id="dialogs"></div>
+  <div id="snackbar" role="status" aria-live="polite"></div>
+  <input type="file" id="import-file" accept=".json,.csv,application/json,text/csv" hidden>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
