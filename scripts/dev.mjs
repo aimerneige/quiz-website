@@ -57,6 +57,6 @@ server.on('error', error => {
   process.exitCode = 1;
 });
 
-server.listen(8000, '127.0.0.1', () => {
-  console.log('Development server: http://localhost:8000');
+server.listen(0, '127.0.0.1', () => {
+  console.log(`Development server: http://localhost:${server.address().port}`);
 });
