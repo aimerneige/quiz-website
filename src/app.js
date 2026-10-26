@@ -31,8 +31,7 @@ const paths={
   file:'<path d="M14 2H5v20h14V7zM14 2v6h5M8 12h8m-8 4h6"/>',
   code:'<path d="m8 6-6 6 6 6m8-12 6 6-6 6m-5 2 2-16"/>',
   grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-  spark:'<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/>',
-  filter:'<path d="M4 6h16M7 12h10M10 18h4"/>'
+  spark:'<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/>'
 };
 const icon=(name,cls='')=>`<svg viewBox="0 0 24 24" aria-hidden="true" class="${cls}">${paths[name]||paths.file}</svg>`;
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -48,7 +47,7 @@ try {
 let theme='system';try{theme=localStorage.getItem('zhijian-theme')||'system';}catch{}
 if(!['system','light','dark'].includes(theme))theme='system';
 const media=matchMedia('(prefers-color-scheme: dark)');
-const state={view:'practice',questions,tags:[],match:'any',deck:[],index:0,round:1,hint:false,answer:false,search:'',libraryTag:'',page:1,theme,themeMenu:false};
+const state={view:'practice',questions,tags:[],match:'any',deck:[],index:0,round:1,hint:false,answer:false,search:'',libraryTag:'',page:1,theme,themeMenu:false,sidebarCollapsed:matchMedia('(max-width:960px)').matches,filtersCollapsed:false};
 let dialogMode='',formTags=[],formId=null,pendingImport=null,snackbarTimer=null;
 const PAGE_SIZE=8;
 const allTags=()=>[...new Set(state.questions.flatMap(q=>q.tags))].sort((a,b)=>a.localeCompare(b,'zh-CN'));
@@ -77,11 +76,12 @@ function toast(message,actionLabel='',action=null){
 }
 const brand=`<div class="brand-mark">${icon('book')}</div><div class="brand-copy"><div class="brand-name">知间</div><div class="brand-caption">ROOM TO RECALL</div></div>`;
 function render(){
-  $('#app').innerHTML=`<div class="shell">
+  $('#app').innerHTML=`<div class="shell ${state.sidebarCollapsed?'sidebar-collapsed':''}">
     <aside class="sidebar" aria-label="主导航"><div class="brand">${brand}</div>
-      <nav class="nav"><button class="nav-item ${state.view==='practice'?'active':''}" data-action="nav-practice" ${state.view==='practice'?'aria-current="page"':''} aria-label="抽题练习">${icon('cards')}<span class="nav-label">抽题练习</span></button><button class="nav-item ${state.view==='library'?'active':''}" data-action="nav-library" ${state.view==='library'?'aria-current="page"':''} aria-label="我的题库">${icon('library')}<span class="nav-label">我的题库</span><span class="nav-count">${state.questions.length}</span></button></nav>
+      <nav class="nav" id="sidebar-navigation"><button class="nav-item ${state.view==='practice'?'active':''}" data-action="nav-practice" ${state.view==='practice'?'aria-current="page"':''} aria-label="抽题练习" title="抽题练习">${icon('cards')}<span class="nav-label">抽题练习</span></button><button class="nav-item ${state.view==='library'?'active':''}" data-action="nav-library" ${state.view==='library'?'aria-current="page"':''} aria-label="我的题库" title="我的题库">${icon('library')}<span class="nav-label">我的题库</span><span class="nav-count">${state.questions.length}</span></button></nav>
       <div class="sidebar-section eyebrow">YOUR LITTLE STUDY ROOM</div><div class="sidebar-tip">${icon('leaf')}<strong>给知识一点生长的时间</strong><p>不必一次记住所有。<br>每天回想一点，就很好。</p></div>
       <div class="sidebar-bottom"><div class="storage-note"><span class="status-dot"></span>只属于你的本地题库</div><p>无需账号 · 数据保存在当前浏览器</p></div>
+      <button class="sidebar-toggle" data-action="toggle-sidebar" aria-expanded="${!state.sidebarCollapsed}" aria-controls="sidebar-navigation" aria-label="${state.sidebarCollapsed?'展开主导航':'收起主导航'}" title="${state.sidebarCollapsed?'展开主导航':'收起主导航'}">${icon(state.sidebarCollapsed?'chevron':'back')}<span>收起导航</span></button>
     </aside>
     <div class="workspace"><header class="topbar"><div class="mobile-brand"><div class="brand-mark">${icon('book')}</div>知间</div><div class="breadcrumb"><span>学习空间</span>${icon('chevron')}<span>${state.view==='practice'?'抽题练习':'我的题库'}</span></div><div class="top-actions"><span class="autosave">${icon(storageWarning?'lock':'checkCircle')}${storageWarning?'请检查存储':'数据已保存在本地'}</span><button class="icon-btn" data-action="theme-menu" aria-label="切换主题" aria-expanded="${state.themeMenu}" title="外观主题">${icon(document.documentElement.dataset.theme==='dark'?'moon':'sun')}</button></div></header>
     ${state.themeMenu?themeMenu():''}<main class="content" id="main">${storageWarning?`<div class="storage-warning">${esc(storageWarning)}${rawRecovery?'<button class="text-link" data-action="recovery-export">导出原始备份</button>':''}</div>`:''}${state.view==='practice'?practiceView():libraryView()}<footer class="page-footer"><span>${icon('lock')} 所有学习数据，仅保存在此浏览器</span><span class="footer-brand">知间<span class="tiny-dot">/</span>让每一次回想都有收获</span></footer></main></div></div>`;
@@ -89,7 +89,7 @@ function render(){
 }
 function themeMenu(){return `<div class="menu-popover" role="group" aria-label="外观主题">${[['light','sun','亮色主题'],['dark','moon','暗色主题'],['system','monitor','跟随系统']].map(([value,i,label])=>`<button data-action="set-theme" data-value="${value}" class="${state.theme===value?'selected':''}" aria-pressed="${state.theme===value}">${icon(i)}${label}${state.theme===value?icon('check','check'):''}</button>`).join('')}</div>`;}
 function practiceView(){return `<div class="page-heading"><div><div class="page-kicker"><span></span>A LITTLE EVERY DAY</div><h1>让知识，在回想中生长。</h1><p class="page-subtitle">选一个方向，抽一道题。给自己一点思考的时间。</p></div><button class="button outlined heading-button" data-action="nav-library">${icon('library')}管理题库</button></div>
-  <div class="practice-layout"><aside class="filter-panel" aria-label="抽题筛选"><div class="filter-title"><h2>这次，想练些什么？</h2>${icon('filter')}</div><p class="filter-caption">选择标签，找到今天的学习方向。</p><div class="filter-tags-wrap"><button class="tag-chip all-chip ${!state.tags.length?'selected':''}" data-action="all-tags" aria-pressed="${!state.tags.length}">${icon(!state.tags.length?'check':'grid')}全部题目<span class="count">${state.questions.length}</span></button><div class="tag-list">${allTags().map(t=>`<button class="tag-chip ${state.tags.includes(t)?'selected':''}" data-action="toggle-tag" data-tag="${esc(t)}" aria-pressed="${state.tags.includes(t)}">${state.tags.includes(t)?icon('check'):''}${esc(t)}<span class="count">${state.questions.filter(q=>q.tags.includes(t)).length}</span></button>`).join('')||'<div class="empty-filter">添加题目和标签，从这里开始。</div>'}</div></div><div class="match-settings"><p class="match-label">多个标签的匹配方式</p><div class="segmented" role="group" aria-label="标签匹配方式"><button class="${state.match==='any'?'selected':''}" data-action="match-any" aria-pressed="${state.match==='any'}">满足任一标签</button><button class="${state.match==='all'?'selected':''}" data-action="match-all" aria-pressed="${state.match==='all'}">包含全部标签</button></div></div><p class="filter-bottom">共 <strong>${pool().length}</strong> 道题符合条件${state.tags.length?` <button class="text-link" data-action="reset-filters">重置</button>`:''}<br>随机抽取，每轮不重复。</p></aside>
+  <div class="practice-layout ${state.filtersCollapsed?'filters-collapsed':''}"><aside class="filter-panel" aria-label="抽题筛选"><div class="filter-title"><h2>这次，想练些什么？</h2><button class="icon-btn small filter-toggle" data-action="toggle-filters" aria-expanded="${!state.filtersCollapsed}" aria-controls="filter-controls" aria-label="${state.filtersCollapsed?'展开抽题筛选':'收起抽题筛选'}" title="${state.filtersCollapsed?'展开抽题筛选':'收起抽题筛选'}">${icon('chevron')}</button></div><div id="filter-controls" ${state.filtersCollapsed?'hidden':''}><p class="filter-caption">选择标签，找到今天的学习方向。</p><div class="filter-tags-wrap"><button class="tag-chip all-chip ${!state.tags.length?'selected':''}" data-action="all-tags" aria-pressed="${!state.tags.length}">${icon(!state.tags.length?'check':'grid')}全部题目<span class="count">${state.questions.length}</span></button><div class="tag-list">${allTags().map(t=>`<button class="tag-chip ${state.tags.includes(t)?'selected':''}" data-action="toggle-tag" data-tag="${esc(t)}" aria-pressed="${state.tags.includes(t)}">${state.tags.includes(t)?icon('check'):''}${esc(t)}<span class="count">${state.questions.filter(q=>q.tags.includes(t)).length}</span></button>`).join('')||'<div class="empty-filter">添加题目和标签，从这里开始。</div>'}</div></div><div class="match-settings"><p class="match-label">多个标签的匹配方式</p><div class="segmented" role="group" aria-label="标签匹配方式"><button class="${state.match==='any'?'selected':''}" data-action="match-any" aria-pressed="${state.match==='any'}">满足任一标签</button><button class="${state.match==='all'?'selected':''}" data-action="match-all" aria-pressed="${state.match==='all'}">包含全部标签</button></div></div><p class="filter-bottom">共 <strong>${pool().length}</strong> 道题符合条件${state.tags.length?` <button class="text-link" data-action="reset-filters">重置</button>`:''}<br>随机抽取，每轮不重复。</p></div></aside>
   <div class="study-column"><div id="question-zone">${questionCard()}</div><div class="study-note"><div><div class="study-note-title">${icon('spark')}先回想，再揭晓。</div><p>主动回忆，比反复阅读多一点挑战，也多一点收获。</p></div><div class="note-art" aria-hidden="true"><svg viewBox="0 0 75 55"><rect x="20" y="8" width="30" height="39" rx="5" transform="rotate(-14 35 28)"/><rect x="28" y="8" width="30" height="39" rx="5" fill="var(--secondary)" transform="rotate(10 43 28)"/><path d="m36 26 5 5 9-10M8 12v7m-3-3h6M63 37v8m-4-4h8"/></svg></div></div><div class="keyboard-note"><span class="key">Space</span>查看答案<span class="separator">·</span><span class="key">H</span>查看提示<span class="separator">·</span><span class="key">→</span>下一题</div></div></div>`;}
 function questionCard(){
   const q=current();
@@ -158,6 +158,10 @@ function toggleReveal(which){
 $('#app').addEventListener('click',e=>{
   const button=e.target.closest('[data-action]');if(!button||button.disabled)return;const action=button.dataset.action;
   if(action.startsWith('nav-')){changeView(action==='nav-practice'?'practice':'library');return;}
+  if(action==='toggle-sidebar'||action==='toggle-filters'){
+    const key=action==='toggle-sidebar'?'sidebarCollapsed':'filtersCollapsed';
+    state[key]=!state[key];render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});return;
+  }
   if(action==='theme-menu'){state.themeMenu=!state.themeMenu;render();return;}
   if(action==='set-theme'){state.theme=button.dataset.value;state.themeMenu=false;try{localStorage.setItem('zhijian-theme',state.theme);}catch{toast('主题已切换，浏览器当前无法保存偏好。');}applyTheme();render();return;}
   if(['toggle-tag','all-tags','reset-filters','match-any','match-all'].includes(action)){
