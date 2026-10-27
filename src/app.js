@@ -8,6 +8,7 @@ const paths={
   library:'<path d="M4 5h4v15H4zM10 5h4v15h-4zM16 6l3-1 4 14-3 1z"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
   moon:'<path d="M20.5 14A9 9 0 0 1 10 3.5 9 9 0 1 0 20.5 14z"/>',
+  language:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z"/>',
   monitor:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',
   check:'<path d="m5 12 4 4L19 6"/>',
   checkCircle:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
@@ -50,7 +51,7 @@ try {
 let theme='system';try{theme=localStorage.getItem('zhijian-theme')||'system';}catch{}
 if(!['system','light','dark'].includes(theme))theme='system';
 const media=matchMedia('(prefers-color-scheme: dark)');
-const state={view:'practice',questions,tags:[],match:'any',deck:[],index:0,round:1,hint:false,answer:false,search:'',libraryTag:'',page:1,theme,themeMenu:false,sidebarCollapsed:matchMedia('(max-width:960px)').matches,filtersCollapsed:false};
+const state={view:'practice',questions,tags:[],match:'any',deck:[],index:0,round:1,hint:false,answer:false,search:'',libraryTag:'',page:1,theme,themeMenu:false,languageMenu:false,sidebarCollapsed:matchMedia('(max-width:960px)').matches,filtersCollapsed:false};
 let dialogMode='',formTags=[],formId=null,pendingImport=null,snackbarTimer=null;
 const PAGE_SIZE=8;
 const allTags=()=>[...new Set(state.questions.flatMap(q=>q.tags))].sort((a,b)=>a.localeCompare(b,'zh-CN'));
@@ -90,11 +91,12 @@ function render(){
       <div class="sidebar-bottom"><div class="storage-note"><span class="status-dot"></span>${tr("只属于你的本地题库")}</div><p>${tr("无需账号 · 数据保存在当前浏览器")}</p></div>
       <button class="sidebar-toggle" data-action="toggle-sidebar" aria-expanded="${!state.sidebarCollapsed}" aria-controls="sidebar-navigation" aria-label="${state.sidebarCollapsed?tr("展开主导航"):tr("收起主导航")}" title="${state.sidebarCollapsed?tr("展开主导航"):tr("收起主导航")}">${icon(state.sidebarCollapsed?'chevron':'back')}<span>${tr("收起导航")}</span></button>
     </aside>
-    <div class="workspace"><header class="topbar"><div class="mobile-brand"><div class="brand-mark">${icon('book')}</div>quiz</div><div class="breadcrumb"><span>${tr("学习空间")}</span>${icon('chevron')}<span>${state.view==='practice'?tr("抽题练习"):tr("我的题库")}</span></div><div class="top-actions"><select id="language-select" class="language-select" aria-label="${tr("语言")}" title="${tr("语言")}">${languages.map(value=>`<option value="${value}" ${getLanguage()===value?'selected':''}>${{'zh-CN':'中文',ja:'日本語',en:'English'}[value]}</option>`).join('')}</select><span class="autosave">${icon(storageWarning?'lock':'checkCircle')}${storageWarning?tr("请检查存储"):tr("数据已保存在本地")}</span><button class="icon-btn" data-action="theme-menu" aria-label="${tr("切换主题")}" aria-expanded="${state.themeMenu}" title="${tr("外观主题")}">${icon(document.documentElement.dataset.theme==='dark'?'moon':'sun')}</button></div></header>
-    ${state.themeMenu?themeMenu():''}<main class="content" id="main">${storageWarning?`<div class="storage-warning">${esc(tr(storageWarning))}${rawRecovery?`<button class="text-link" data-action="recovery-export">${tr("导出原始备份")}</button>`:''}</div>`:''}${state.view==='practice'?practiceView():libraryView()}<footer class="page-footer"><span>${icon('lock')} ${tr("所有学习数据，仅保存在此浏览器")}</span><span class="footer-brand">quiz<span class="tiny-dot">/</span>${tr("让每一次回想都有收获")}</span></footer></main></div></div>`;
+    <div class="workspace"><header class="topbar"><div class="mobile-brand"><div class="brand-mark">${icon('book')}</div>quiz</div><div class="breadcrumb"><span>${tr("学习空间")}</span>${icon('chevron')}<span>${state.view==='practice'?tr("抽题练习"):tr("我的题库")}</span></div><div class="top-actions"><button class="icon-btn" data-action="language-menu" aria-label="${tr("语言")}" aria-expanded="${state.languageMenu}" title="${tr("语言")}">${icon('language')}</button><span class="autosave">${icon(storageWarning?'lock':'checkCircle')}${storageWarning?tr("请检查存储"):tr("数据已保存在本地")}</span><button class="icon-btn" data-action="theme-menu" aria-label="${tr("切换主题")}" aria-expanded="${state.themeMenu}" title="${tr("外观主题")}">${icon(document.documentElement.dataset.theme==='dark'?'moon':'sun')}</button></div></header>
+    ${state.themeMenu?themeMenu():''}${state.languageMenu?languageMenu():''}<main class="content" id="main">${storageWarning?`<div class="storage-warning">${esc(tr(storageWarning))}${rawRecovery?`<button class="text-link" data-action="recovery-export">${tr("导出原始备份")}</button>`:''}</div>`:''}${state.view==='practice'?practiceView():libraryView()}<footer class="page-footer"><span>${icon('lock')} ${tr("所有学习数据，仅保存在此浏览器")}</span><span class="footer-brand">quiz<span class="tiny-dot">/</span>${tr("让每一次回想都有收获")}</span></footer></main></div></div>`;
   if(state.view==='library')renderLibraryList();
 }
 function themeMenu(){return `<div class="menu-popover" role="group" aria-label="${tr("外观主题")}">${[['light','sun',tr("亮色主题")],['dark','moon',tr("暗色主题")],['system','monitor',tr("跟随系统")]].map(([value,i,label])=>`<button data-action="set-theme" data-value="${value}" class="${state.theme===value?'selected':''}" aria-pressed="${state.theme===value}">${icon(i)}${label}${state.theme===value?icon('check','check'):''}</button>`).join('')}</div>`;}
+function languageMenu(){return `<div class="menu-popover" role="group" aria-label="${tr("语言")}">${languages.map(value=>`<button data-action="set-language" data-value="${value}" lang="${value}" class="${getLanguage()===value?'selected':''}" aria-pressed="${getLanguage()===value}">${icon('language')}${{'zh-CN':'中文',ja:'日本語',en:'English'}[value]}${getLanguage()===value?icon('check','check'):''}</button>`).join('')}</div>`;}
 function practiceView(){return `<div class="page-heading"><div><div class="page-kicker"><span></span>${tr("A LITTLE EVERY DAY")}</div><h1>${tr("让知识，在回想中生长。")}</h1><p class="page-subtitle">${tr("选一个方向，抽一道题。给自己一点思考的时间。")}</p></div><button class="button outlined heading-button" data-action="nav-library">${icon('library')}${tr("管理题库")}</button></div>
   <div class="practice-layout ${state.filtersCollapsed?'filters-collapsed':''}"><aside class="filter-panel" aria-label="${tr("抽题筛选")}"><div class="filter-title"><h2>${tr("这次，想练些什么？")}</h2><button class="icon-btn small filter-toggle" data-action="toggle-filters" aria-expanded="${!state.filtersCollapsed}" aria-controls="filter-controls" aria-label="${state.filtersCollapsed?tr("展开抽题筛选"):tr("收起抽题筛选")}" title="${state.filtersCollapsed?tr("展开抽题筛选"):tr("收起抽题筛选")}">${icon('chevron')}</button></div><div id="filter-controls" ${state.filtersCollapsed?'hidden':''}><p class="filter-caption">${tr("选择标签，找到今天的学习方向。")}</p><div class="filter-tags-wrap"><button class="tag-chip all-chip ${!state.tags.length?'selected':''}" data-action="all-tags" aria-pressed="${!state.tags.length}">${icon(!state.tags.length?'check':'grid')}${tr("全部题目")}<span class="count">${state.questions.length}</span></button><div class="tag-list">${allTags().map(t=>`<button class="tag-chip ${state.tags.includes(t)?'selected':''}" data-action="toggle-tag" data-tag="${esc(t)}" aria-pressed="${state.tags.includes(t)}">${state.tags.includes(t)?icon('check'):''}${esc(t)}<span class="count">${state.questions.filter(q=>q.tags.includes(t)).length}</span></button>`).join('')||`<div class="empty-filter">${tr("添加题目和标签，从这里开始。")}</div>`}</div></div><div class="match-settings"><p class="match-label">${tr("多个标签的匹配方式")}</p><div class="segmented" role="group" aria-label="${tr("标签匹配方式")}"><button class="${state.match==='any'?'selected':''}" data-action="match-any" aria-pressed="${state.match==='any'}">${tr("满足任一标签")}</button><button class="${state.match==='all'?'selected':''}" data-action="match-all" aria-pressed="${state.match==='all'}">${tr("包含全部标签")}</button></div></div><p class="filter-bottom">${tr('共 {count} 道题符合条件',{count:pool().length})}${state.tags.length?` <button class="text-link" data-action="reset-filters">${tr("重置")}</button>`:''}<br>${tr("随机抽取，每轮不重复。")}</p></div></aside>
   <div class="study-column"><div id="question-zone">${questionCard()}</div><div class="study-note"><div><div class="study-note-title">${icon('spark')}${tr("先回想，再揭晓。")}</div><p>${tr("主动回忆，比反复阅读多一点挑战，也多一点收获。")}</p></div><div class="note-art" aria-hidden="true"><svg viewBox="0 0 75 55"><rect x="20" y="8" width="30" height="39" rx="5" transform="rotate(-14 35 28)"/><rect x="28" y="8" width="30" height="39" rx="5" fill="var(--secondary)" transform="rotate(10 43 28)"/><path d="m36 26 5 5 9-10M8 12v7m-3-3h6M63 37v8m-4-4h8"/></svg></div></div><div class="keyboard-note"><span class="key">Space</span>${tr("查看答案")}<span class="separator">·</span><span class="key">H</span>${tr("查看提示")}<span class="separator">·</span><span class="key">→</span>${tr("下一题")}</div></div></div>`;}
@@ -157,7 +159,7 @@ function download(content,filename,type){
   const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function exportBank(format){const date=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());download(format==='csv'?exportCSV(state.questions):exportJSON(state.questions),`quiz题库-${date}.${format}`,format==='csv'?'text/csv;charset=utf-8':'application/json;charset=utf-8');toast(`${tr('已导出 {count} 道题目的 {format} 题库',{count:state.questions.length,format:format.toUpperCase()})}`);}
-function changeView(view){state.view=view;state.themeMenu=false;render();window.scrollTo({top:0});$('#main h1')?.setAttribute('tabindex','-1');$('#main h1')?.focus({preventScroll:true});}
+function changeView(view){state.view=view;state.themeMenu=false;state.languageMenu=false;render();window.scrollTo({top:0});$('#main h1')?.setAttribute('tabindex','-1');$('#main h1')?.focus({preventScroll:true});}
 function nextQuestion(){if(!current())return;if(state.index<state.deck.length-1)state.index++;else{const old=state.deck.at(-1);state.deck=shuffle(pool().map(q=>q.id),old);state.index=0;state.round++;toast(`${tr('第 {round} 轮完成，开始新一轮练习',{round:state.round-1})}`);}state.hint=false;state.answer=false;renderQuestion(true);}
 function toggleReveal(which){
   if(!current())return;state[which]=!state[which];const button=$(`#${which}-toggle`),content=$(`#${which}-content`);button.setAttribute('aria-expanded',String(state[which]));button.querySelector('.trailing').innerHTML=`${state[which]?(which==='hint'?tr("收起提示"):tr("收起答案")):(which==='hint'?tr("点击展开"):tr("想好再看"))}${icon('down')}`;content.hidden=!state[which];
@@ -169,7 +171,8 @@ $('#app').addEventListener('click',e=>{
     const key=action==='toggle-sidebar'?'sidebarCollapsed':'filtersCollapsed';
     state[key]=!state[key];render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});return;
   }
-  if(action==='theme-menu'){state.themeMenu=!state.themeMenu;render();return;}
+  if(action==='theme-menu'||action==='language-menu'){const key=action==='theme-menu'?'themeMenu':'languageMenu';const open=!state[key];state.themeMenu=false;state.languageMenu=false;state[key]=open;render();$(`[data-action="${action}"]`)?.focus({preventScroll:true});return;}
+  if(action==='set-language'){setLanguage(button.dataset.value);state.languageMenu=false;try{localStorage.setItem(languageKey,getLanguage());}catch{toast(tr('语言已切换，浏览器当前无法保存偏好。'));}render();$('[data-action="language-menu"]').focus({preventScroll:true});return;}
   if(action==='set-theme'){state.theme=button.dataset.value;state.themeMenu=false;try{localStorage.setItem('zhijian-theme',state.theme);}catch{toast(tr("主题已切换，浏览器当前无法保存偏好。"));}applyTheme();render();return;}
   if(['toggle-tag','all-tags','reset-filters','match-any','match-all'].includes(action)){
     if(action==='toggle-tag'){const tag=button.dataset.tag;state.tags=state.tags.includes(tag)?state.tags.filter(t=>t!==tag):[...state.tags,tag];}
@@ -199,11 +202,7 @@ $('#app').addEventListener('click',e=>{
 });
 $('#app').addEventListener('input',e=>{if(e.target.id==='library-search'){state.search=e.target.value;state.page=1;$('.search-clear').hidden=!state.search;renderLibraryList();}});
 $('#app').addEventListener('change',e=>{
-  if(e.target.id==='language-select'){
-    setLanguage(e.target.value);
-    try{localStorage.setItem(languageKey,getLanguage());}catch{toast(tr('语言已切换，浏览器当前无法保存偏好。'));}
-    render();$('#language-select').focus({preventScroll:true});
-  }else if(e.target.id==='library-tag'){state.libraryTag=e.target.value;state.page=1;renderLibraryList();}
+  if(e.target.id==='library-tag'){state.libraryTag=e.target.value;state.page=1;renderLibraryList();}
 });
 $('#dialogs').addEventListener('click',e=>{
   const button=e.target.closest('[data-dialog-action]');if(!button||button.disabled)return;const action=button.dataset.dialogAction;
@@ -232,10 +231,10 @@ $('#dialogs').addEventListener('submit',e=>{
 $('#dialogs').addEventListener('keydown',e=>{if(e.target.id==='tag-input'&&e.key==='Enter'){e.preventDefault();collectTags();}});
 $('#dialogs').addEventListener('change',e=>{if(e.target.name==='import-mode'&&pendingImport){pendingImport.replace=e.target.value==='replace';showImportPreview();const r=document.querySelector(`input[name="import-mode"][value="${pendingImport.replace?'replace':'append'}"]`);r?.focus({preventScroll:true});}});
 $('#import-file').addEventListener('change',e=>readFile(e.target.files[0]));
-document.addEventListener('click',e=>{if(state.themeMenu&&!e.target.closest('[data-action="theme-menu"]')&&!e.target.closest('.menu-popover')){state.themeMenu=false;$('.menu-popover')?.remove();$('[data-action="theme-menu"]')?.setAttribute('aria-expanded','false');}});
+document.addEventListener('click',e=>{if((state.themeMenu||state.languageMenu)&&!e.target.closest('[data-action="theme-menu"],[data-action="language-menu"],.menu-popover')){state.themeMenu=false;state.languageMenu=false;$('.menu-popover')?.remove();document.querySelectorAll('[data-action="theme-menu"],[data-action="language-menu"]').forEach(button=>button.setAttribute('aria-expanded','false'));}});
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&state.themeMenu){state.themeMenu=false;$('.menu-popover')?.remove();$('[data-action="theme-menu"]')?.setAttribute('aria-expanded','false');$('[data-action="theme-menu"]')?.focus();return;}
-  if(state.view!=='practice'||$('#dialogs dialog')||state.themeMenu||e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
+  if(e.key==='Escape'&&(state.themeMenu||state.languageMenu)){const action=state.languageMenu?'language-menu':'theme-menu';state.themeMenu=false;state.languageMenu=false;$('.menu-popover')?.remove();$(`[data-action="${action}"]`)?.setAttribute('aria-expanded','false');$(`[data-action="${action}"]`)?.focus();return;}
+  if(state.view!=='practice'||$('#dialogs dialog')||state.themeMenu||state.languageMenu||e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
   if(e.target.closest('input,textarea,select,button,a,[contenteditable="true"]'))return;
   if(e.code==='Space'){e.preventDefault();toggleReveal('answer');}else if(e.key.toLowerCase()==='h'){e.preventDefault();toggleReveal('hint');}else if(e.key==='ArrowRight'){e.preventDefault();nextQuestion();}else if(e.key==='ArrowLeft'&&state.index>0){e.preventDefault();state.index--;state.hint=false;state.answer=false;renderQuestion(true);}
 });
