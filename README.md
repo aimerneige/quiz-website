@@ -89,7 +89,7 @@ python3 -m http.server 8000 --directory dist
 
 题库使用当前站点源的 `localStorage`，键为 `zhijian-bank-v1`。主题键为 `zhijian-theme`。首次访问载入 12 道示例题。清空浏览器存储、更换设备、浏览器或站点域名后，需重新导入备份。多个标签页通过 `storage` 事件同步题库变更。
 
-JSON 支持数组或 `{ "questions": [...] }`。每条记录的 `question` 和 `answer` 必填，`hint` 和 `tags` 选填；CSV 也支持中文表头“题目、提示、答案、标签”。题目与答案完全相同的导入记录自动去重。
+JSON 支持数组或 `{ "questions": [...] }`。每条记录的 `question` 必填，`hint`、`answer` 和 `tags` 选填，可先添加问题再编辑补充；CSV 仅需题目列；CSV 也支持中文表头“题目、提示、答案、标签”。题目与答案完全相同的导入记录自动去重。
 
 ## 验证
 

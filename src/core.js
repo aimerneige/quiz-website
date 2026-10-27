@@ -15,7 +15,6 @@ export function normalizeQuestion(row) {
   const hint=String(get('hint','提示')).trim();
   const tags=parseTags(get('tags','标签'));
   if (!question) throw Error(tr("缺少题目"));
-  if (!answer) throw Error(tr("缺少答案"));
   if (question.length>10000 || answer.length>30000 || hint.length>30000) throw Error(tr("题目最多 10,000 字，提示和答案最多 30,000 字"));
   if (tags.length>20 || tags.some(t=>t.length>40)) throw Error(tr("每题最多 20 个标签，每个标签最多 40 字"));
   return {id:uid(), question, hint, answer, tags};
@@ -40,7 +39,7 @@ export function parseCSV(input) {
   row.push(cell);if(row.some(v=>v.trim()))rows.push(row);
   if(!rows.length)throw Error(tr("文件内容为空"));
   const headers=rows.shift().map(h=>h.trim().toLowerCase());
-  if(!headers.some(h=>['question','题目','问题'].includes(h))||!headers.some(h=>['answer','答案'].includes(h)))throw Error(tr("CSV 首行需包含 question / answer，或“题目 / 答案”列"));
+  if(!headers.some(h=>['question','题目','问题'].includes(h)))throw Error(tr("CSV 首行需包含 question，或“题目 / 问题”列"));
   return rows.map((values,index)=>{
     if(values.length>headers.length)throw Error(`${tr('CSV 第 {row} 条记录的列数超过表头，请用双引号包住内容中的逗号',{row:index+1})}`);
     return Object.fromEntries(headers.map((h,i)=>[h,values[i]||'']));

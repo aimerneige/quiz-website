@@ -12,3 +12,7 @@ export const seedQuestions = [
   {id:'sample-11',question:'如何用英语自然地表达“熟能生巧”？',hint:'一个以 Practice 开头的常见谚语。',answer:'Practice makes perfect.\n直译为“练习造就完美”，用来表达通过反复练习可以变得熟练。',tags:['英语','语言']},
   {id:'sample-12',question:'为什么说“相关性”不等于“因果关系”？',hint:'两个现象一起变化，是否可能是因为另一个共同因素？',answer:'相关性说明两个变量存在统计关联，但不能单独证明其中一个导致另一个。它们可能受第三个因素影响，也可能是偶然关联，或存在反向因果。\n\n例如，夏季冰淇淋销量和游泳人数都增加，主要共同原因是天气变热，而非吃冰淇淋导致人们去游泳。',tags:['科学','常识']}
 ];
+
+export function isSampleQuestion(question) {
+  return seedQuestions.some(sample=>['question','hint','answer'].every(key=>sample[key]===question[key])&&JSON.stringify(sample.tags)===JSON.stringify(question.tags));
+}

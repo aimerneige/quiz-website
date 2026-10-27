@@ -1,7 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeQuestion,readImport,mergeQuestions,exportJSON,exportCSV,parseCSV,filterQuestions,shuffle} from '../src/core.js';
-import {seedQuestions} from '../src/data.js';
+import {seedQuestions,isSampleQuestion} from '../src/data.js';
+
+test('sample detection survives storage and import IDs while preserving edited and personal questions',()=>{
+  const imported=readImport(exportJSON(seedQuestions),'json').valid;
+  assert.ok(imported.every(isSampleQuestion));
+  assert.ok(seedQuestions.every(isSampleQuestion));
+  const sample=seedQuestions[0];
+  for(const key of ['question','hint','answer'])assert.equal(isSampleQuestion({...sample,[key]:'自定义内容'}),false);
+  assert.equal(isSampleQuestion({...sample,tags:['自定义']}),false);
+  assert.equal(isSampleQuestion(normalizeQuestion({question:'我的问题',answer:'我的答案'})),false);
+});
 
 test('JSON and CSV preserve multilingual, multiline, quoted content and unusual tag characters',()=>{
   const q=normalizeQuestion({question:'为什么？, "Why"\n第二行',hint:'提示\r\n下一行',answer:'答案, "quoted"\n=1+1',tags:['科学','a|b','a,b','词 组','"quoted"']});
@@ -15,8 +25,23 @@ test('CSV accepts BOM, Chinese headers, CRLF, quoted commas, and empty optional 
 });
 test('import validates individual rows and never silently invents required fields',()=>{
   const out=readImport(JSON.stringify([{question:'有效',answer:'答案'},null,{question:'无答案'},{question:'标签过长',answer:'答案',tags:['x'.repeat(41)]}]),'json');
-  assert.equal(out.valid.length,1);assert.deepEqual(out.errors.map(e=>e.row),[2,3,4]);
+  assert.equal(out.valid.length,2);assert.deepEqual(out.errors.map(e=>e.row),[2,4]);
   assert.throws(()=>readImport('{bad','json'),/JSON/);assert.throws(()=>parseCSV('question,answer\n"未关闭,内容'),/闭合/);assert.throws(()=>parseCSV('a,b\nx,y'),/首行/);assert.throws(()=>parseCSV('question,answer\n问题,答案,意外列'),/列数/);
+});
+test('question-only records can be imported, restored and completed later',()=>{
+  for(const [content,format] of [['[{"question":"待补充"}]','json'],['question\n待补充','csv'],['题目\n待补充','csv'],['问题,答案\n待补充,   ','csv']]){
+    const parsed=readImport(content,format);
+    assert.deepEqual(parsed.errors,[]);
+    const q=parsed.valid[0];
+    assert.equal(q.question,'待补充');assert.equal(q.answer,'');assert.equal(q.hint,'');assert.deepEqual(q.tags,[]);
+    for(const [backup,type] of [[exportJSON([q]),'json'],[exportCSV([q]),'csv']]){
+      const restored=readImport(backup,type);
+      assert.deepEqual(restored.errors,[]);assert.equal(restored.valid[0].answer,'');
+    }
+    const completed=normalizeQuestion({...q,hint:'提示',answer:'答案',tags:['标签']});
+    assert.equal(completed.question,q.question);assert.equal(completed.hint,'提示');assert.equal(completed.answer,'答案');assert.deepEqual(completed.tags,['标签']);
+  }
+  assert.throws(()=>normalizeQuestion({question:'   '}),/缺少题目/);
 });
 test('append preserves existing IDs and replacement removes the old bank only when selected',()=>{
   const old=normalizeQuestion({question:'旧题',answer:'旧答案'});const newQ=normalizeQuestion({question:'新题',answer:'新答案'});

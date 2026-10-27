@@ -46,8 +46,8 @@ test('validation follows the selected language while import aliases and question
       assert.equal(parsed.valid[0].question,'原文');
       assert.equal(parsed.valid[0].answer,'日本語 English');
       assert.deepEqual(parsed.valid[0].tags,['科学']);
-      const invalid=readImport('[{"question":"原文"}]','json');
-      assert.equal(invalid.errors[0].message,tr('缺少答案'));
+      const invalid=readImport('[{"answer":"原文"}]','json');
+      assert.equal(invalid.errors[0].message,tr('缺少题目'));
       assert.throws(()=>parseCSV('question,answer\na,b,c'),{message:tr('CSV 第 {row} 条记录的列数超过表头，请用双引号包住内容中的逗号',{row:1})});
       for(const [content,format] of [[exportJSON(parsed.valid),'json'],[exportCSV(parsed.valid),'csv']]){
         assert.equal(readImport(content,format).valid[0].answer,'日本語 English');
