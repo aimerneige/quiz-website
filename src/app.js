@@ -73,7 +73,7 @@ function saveBank(next){
   if(state.libraryTag&&!allTags().includes(state.libraryTag))state.libraryTag='';
   resetDeck();return true;
 }
-function applyTheme(){document.documentElement.dataset.theme=state.theme==='system'?(media.matches?'dark':'light'):state.theme;$('meta[name="theme-color"]').content=document.documentElement.dataset.theme==='dark'?'#141b16':'#f7f8f2';}
+function applyTheme(){document.documentElement.dataset.theme=state.theme==='system'?(media.matches?'dark':'light'):state.theme;$('meta[name="theme-color"]').content=document.documentElement.dataset.theme==='dark'?'#101411':'#f7faf5';}
 applyTheme();media.addEventListener('change',()=>{if(state.theme==='system')applyTheme();});
 function toast(message,actionLabel='',action=null){
   clearTimeout(snackbarTimer);const node=$('#snackbar');node.innerHTML=`<span>${esc(message)}</span>${actionLabel?`<button type="button">${esc(actionLabel)}</button>`:''}`;node.classList.add('visible');if(action)node.querySelector('button').onclick=()=>{node.classList.remove('visible');action();};snackbarTimer=setTimeout(()=>node.classList.remove('visible'),actionLabel?8500:4800);
@@ -86,7 +86,7 @@ function render(){
   $('.skip-link').textContent=tr('跳至主内容');
   $('#app').innerHTML=`<div class="shell ${state.sidebarCollapsed?'sidebar-collapsed':''}">
     <aside class="sidebar" aria-label="${tr("主导航")}"><div class="brand">${brand()}</div>
-      <nav class="nav" id="sidebar-navigation"><button class="nav-item ${state.view==='practice'?'active':''}" data-action="nav-practice" ${state.view==='practice'?'aria-current="page"':''} aria-label="${tr("抽题练习")}" title="${tr("抽题练习")}">${icon('cards')}<span class="nav-label">${tr("抽题练习")}</span></button><button class="nav-item ${state.view==='library'?'active':''}" data-action="nav-library" ${state.view==='library'?'aria-current="page"':''} aria-label="${tr("我的题库")}" title="${tr("我的题库")}">${icon('library')}<span class="nav-label">${tr("我的题库")}</span><span class="nav-count">${state.questions.length}</span></button></nav>
+      <nav class="nav" id="sidebar-navigation"><button class="nav-item ${state.view==='practice'?'active':''}" data-action="nav-practice" ${state.view==='practice'?'aria-current="page"':''} aria-label="${tr("抽题练习")}" title="${tr("抽题练习")}"><span class="nav-icon">${icon('cards')}</span><span class="nav-label">${tr("抽题练习")}</span></button><button class="nav-item ${state.view==='library'?'active':''}" data-action="nav-library" ${state.view==='library'?'aria-current="page"':''} aria-label="${tr("我的题库")}" title="${tr("我的题库")}"><span class="nav-icon">${icon('library')}</span><span class="nav-label">${tr("我的题库")}</span><span class="nav-count">${state.questions.length}</span></button></nav>
       <div class="sidebar-section eyebrow">${tr("YOUR LITTLE STUDY ROOM")}</div><div class="sidebar-tip">${icon('leaf')}<strong>${tr("给知识一点生长的时间")}</strong><p>${tr("不必一次记住所有。")}<br>${tr("每天回想一点，就很好。")}</p></div>
       <div class="sidebar-bottom"><div class="storage-note"><span class="status-dot"></span>${tr("只属于你的本地题库")}</div><p>${tr("无需账号 · 数据保存在当前浏览器")}</p></div>
       <button class="sidebar-toggle" data-action="toggle-sidebar" aria-expanded="${!state.sidebarCollapsed}" aria-controls="sidebar-navigation" aria-label="${state.sidebarCollapsed?tr("展开主导航"):tr("收起主导航")}" title="${state.sidebarCollapsed?tr("展开主导航"):tr("收起主导航")}">${icon(state.sidebarCollapsed?'chevron':'back')}<span>${tr("收起导航")}</span></button>
