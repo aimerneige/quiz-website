@@ -1,10 +1,10 @@
 # quiz · 本地答题空间
 
-完全静态的中、日、英三语答题工具，使用原生 HTML、CSS、JavaScript ES modules，无第三方依赖、无后端请求。源码维护在 `src/`，构建产物生成到 `dist/`，可手动部署到支持静态文件的 Web 服务。
+中、日、英三语答题工具，前端使用原生 HTML、CSS、JavaScript ES modules。可以作为纯静态站点部署（题库保存在浏览器本地），也可以部署到 Cloudflare Workers + D1，支持注册登录并把题库保存到云端。源码维护在 `src/`，构建产物生成到 `dist/`。
 
 ## 开发和测试
 
-需要 Node.js 20 或更高版本。项目没有第三方依赖，不需要运行 `npm install`。
+测试需要 Node.js 22.5 或更高版本（后端测试使用内置的 `node:sqlite` 模拟 D1）。前端和测试没有第三方依赖；只有 Cloudflare 本地开发和部署需要先运行 `npm install` 安装 Wrangler。
 
 ```bash
 npm test
@@ -38,6 +38,56 @@ npm run build
 python3 -m http.server 8000 --directory dist
 ```
 
+## 部署到 Cloudflare（账户与云端题库）
+
+Cloudflare 部署由一个 Worker 完成：`/api/*` 请求由 `worker/index.js` 处理，其他路径直接返回 `dist/` 中的静态文件。用户、登录会话和题目保存在 D1 数据库中。
+
+首次部署：
+
+```bash
+npm install
+npx wrangler login
+npx wrangler d1 create quiz
+```
+
+把 `d1 create` 输出的 `database_id` 填入 `wrangler.jsonc`，然后：
+
+```bash
+npm run cf:deploy
+```
+
+该命令先把 `migrations/` 中的表结构应用到线上 D1，再构建并发布 Worker。之后每次更新运行同一命令即可；已应用的迁移会自动跳过。如需绑定自定义域名，在 Cloudflare 控制台的 Worker 设置中添加。
+
+本地开发（使用本地 D1，不影响线上数据）：
+
+```bash
+npm run db:migrate:local
+npm run cf:dev
+```
+
+然后打开 `http://localhost:8787`。本地数据库保存在 `.wrangler/`，已被 Git 忽略。
+
+### 账户与同步行为
+
+- 右上角的账户按钮仅在后端可用时出现；用 `npm run dev` 或 GitHub Pages 等纯静态方式部署时自动隐藏，网站保持原来的本地模式。
+- 未登录时题库保存在浏览器本地，与以前相同。登录后显示并编辑账户中的云端题库，本地题库保留在浏览器中，退出登录后恢复显示。
+- 首次登录且账户题库为空时，会询问是否把本地自己添加的题目（不含示例题）上传到账户。
+- 每次修改只上传新增、修改和删除的题目；右上角显示“正在同步 / 已同步 / 同步失败”。同步失败可点击重试；有未同步的修改时关闭页面或退出登录会提示。切回页面时会拉取其他设备上的修改。
+- 用户名为 3–32 位字母、数字、`_`、`.` 或 `-`，不区分大小写；密码 8–128 位，使用 PBKDF2-SHA256（10 万次迭代，独立盐值）存储。
+- 登录状态保存在 30 天有效的 HttpOnly、SameSite=Lax Cookie 中（HTTPS 下带 Secure），数据库只保存其 SHA-256 哈希。写请求校验 `Origin` 并要求 JSON 请求体。
+- 每个账户最多 10,000 道题，单题长度限制与本地相同。
+
+### API
+
+| 方法与路径 | 说明 |
+| --- | --- |
+| `GET /api/auth/me` | 当前登录用户，未登录返回 `{"user": null}` |
+| `POST /api/auth/register` | `{username, password}`，注册并登录 |
+| `POST /api/auth/login` | `{username, password}` |
+| `POST /api/auth/logout` | 退出登录 |
+| `GET /api/questions` | 当前用户的全部题目（按 `sort` 排序） |
+| `POST /api/questions/sync` | `{upsert: [...], remove: [ids], replace?: boolean}`，在一个事务中增量保存 |
+
 ## 迁移你的题库
 
 浏览器中添加的题目保存在原网址的本地存储，不在源码包中。迁移到新域名前：
@@ -64,6 +114,11 @@ python3 -m http.server 8000 --directory dist
 | `scripts/build.mjs` | 清理并生成 `dist/` 的构建脚本 |
 | `tests/core.test.mjs` | 核心逻辑测试 |
 | `tests/i18n.test.mjs` | 语言识别、词典完整性、插值和多语言导入校验测试 |
+| `worker/index.js` | Cloudflare Worker：注册登录、会话和题库同步 API，并提供静态文件 |
+| `migrations/` | D1 表结构迁移 |
+| `wrangler.jsonc` | Cloudflare Workers / D1 配置 |
+| `tests/sync.test.mjs` | 云端排序键与增量同步计算测试 |
+| `tests/worker.test.mjs` | 后端 API 测试（使用 `tests/d1-mock.mjs` 模拟 D1） |
 | `dist/` | 可删除、可重新生成的部署产物，不提交到 Git |
 
 ## 功能
@@ -93,4 +148,4 @@ JSON 支持数组或 `{ "questions": [...] }`。每条记录的 `question` 必�
 
 ## 验证
 
-运行 `npm test` 检查导入导出、CSV 转义、去重、标签匹配、随机轮次，以及三语识别、翻译完整性、参数插值和多语言校验。静态站点请经 HTTP(S) 打开，ES modules 不支持直接使用 `file://` 打开。
+运行 `npm test` 检查后端注册登录与题库同步、导入导出、CSV 转义、去重、标签匹配、随机轮次，以及三语识别、翻译完整性、参数插值和多语言校验。静态站点请经 HTTP(S) 打开，ES modules 不支持直接使用 `file://` 打开。

@@ -75,3 +75,41 @@ export function shuffle(items, avoidFirst) {
   if(a.length>1&&a[0]===avoidFirst)[a[0],a[1]]=[a[1],a[0]];
   return a;
 }
+
+// 云端题库按 sort 排序。已有题目保留原 sort，新题目插在相邻题目之间，避免每次保存都改写整个题库。
+export function assignSorts(questions, previous = new Map()) {
+  const sorts = new Map();
+  let last = -Infinity;
+  const anchored = questions.map(q => {
+    const sort = previous.get(q.id);
+    if (typeof sort === 'number' && sort > last) {last = sort; return sort;}
+    return null;
+  });
+  for (let i = 0; i < questions.length;) {
+    if (anchored[i] !== null) {sorts.set(questions[i].id, anchored[i]); i++; continue;}
+    let end = i;
+    while (end < questions.length && anchored[end] === null) end++;
+    const lo = i > 0 ? anchored[i - 1] : null, hi = end < questions.length ? anchored[end] : null, count = end - i;
+    for (let j = 0; j < count; j++) {
+      const sort = lo === null && hi === null ? j + 1 : lo === null ? hi - count + j : hi === null ? lo + j + 1 : lo + (hi - lo) * (j + 1) / (count + 1);
+      sorts.set(questions[i + j].id, sort);
+    }
+    i = end;
+  }
+  const values = questions.map(q => sorts.get(q.id));
+  if (values.some((value, i) => i > 0 && !(value > values[i - 1]))) return new Map(questions.map((q, i) => [q.id, i + 1]));
+  return sorts;
+}
+
+export const syncKey = (q, sort) => JSON.stringify([q.question, q.hint, q.answer, q.tags, sort]);
+
+// 对比上次与服务器确认一致的快照，得到需要上传的新增 / 修改和需要删除的题目。
+export function diffSync(synced, questions, sorts) {
+  const ids = new Set(), upsert = [];
+  for (const q of questions) {
+    ids.add(q.id);
+    const sort = sorts.get(q.id);
+    if (synced.get(q.id) !== syncKey(q, sort)) upsert.push({id: q.id, question: q.question, hint: q.hint, answer: q.answer, tags: q.tags, sort});
+  }
+  return {upsert, remove: [...synced.keys()].filter(id => !ids.has(id))};
+}

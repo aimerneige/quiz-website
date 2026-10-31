@@ -2594,3 +2594,63 @@
     }
   }
 }
+
+/* 账户与云端同步：不放进层，避免被 responsive 层中的通用尺寸覆盖。 */
+.icon-btn.signed-in {
+  color: var(--primary);
+  background: var(--primary-container);
+}
+
+.autosave.sync-error {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: transparent;
+  cursor: pointer;
+}
+
+.autosave.sync-error svg {
+  color: var(--danger);
+}
+
+.menu-popover.account-menu {
+  width: 220px;
+}
+
+.account-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--outline);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.account-name svg {
+  flex: none;
+  color: var(--primary);
+}
+
+.auth-dialog .auth-tabs {
+  width: 100%;
+  max-width: none;
+  margin-bottom: 16px;
+}
+
+.auth-dialog .auth-tabs button {
+  flex: 1;
+}
+
+.auth-dialog .auth-help {
+  margin: -10px 0 16px;
+}
+
+.cloud-loading {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
