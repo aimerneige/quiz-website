@@ -40,6 +40,8 @@ python3 -m http.server 8000 --directory dist
 
 ## 部署到 Cloudflare（账户与云端题库）
 
+完整步骤（登录 Wrangler、创建数据库、绑定自定义域名、日常维护和常见问题）见 [docs/cloudflare.md](docs/cloudflare.md)。
+
 Cloudflare 部署由一个 Worker 完成：`/api/*` 请求由 `worker/index.js` 处理，其他路径直接返回 `dist/` 中的静态文件。用户、登录会话和题目保存在 D1 数据库中。
 
 首次部署：
@@ -117,6 +119,7 @@ npm run cf:dev
 | `worker/index.js` | Cloudflare Worker：注册登录、会话和题库同步 API，并提供静态文件 |
 | `migrations/` | D1 表结构迁移 |
 | `wrangler.jsonc` | Cloudflare Workers / D1 配置 |
+| `docs/cloudflare.md` | 连接并部署到 Cloudflare 的详细说明 |
 | `tests/sync.test.mjs` | 云端排序键与增量同步计算测试 |
 | `tests/worker.test.mjs` | 后端 API 测试（使用 `tests/d1-mock.mjs` 模拟 D1） |
 | `dist/` | 可删除、可重新生成的部署产物，不提交到 Git |
