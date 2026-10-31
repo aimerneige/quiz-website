@@ -1,0 +1,10 @@
+.git
+node_modules
+dist
+bin
+.wrangler
+**/.wrangler
+*.db
+*.db-*
+tests
+docs

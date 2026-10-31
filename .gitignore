@@ -8,3 +8,7 @@ Thumbs.db
 *.tar.gz
 *.zip
 .wrangler/
+bin/
+*.db
+*.db-wal
+*.db-shm

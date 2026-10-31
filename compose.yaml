@@ -1,0 +1,16 @@
+# docker compose up -d 后打开 http://服务器地址:8080
+services:
+  quiz:
+    build: .
+    image: quiz-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 通过 Nginx / Caddy 等反向代理提供 HTTPS 时改为 "true"
+      QUIZ_TRUST_PROXY: "false"
+    volumes:
+      - quiz-data:/data
+
+volumes:
+  quiz-data:

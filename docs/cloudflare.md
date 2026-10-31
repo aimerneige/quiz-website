@@ -2,21 +2,23 @@
 
 本文说明如何把 quiz 部署到 Cloudflare Workers，并连接 D1 数据库，使注册登录和云端题库可用。完成后，同一个 Worker 既提供网页，也处理 `/api/*` 请求。
 
+想部署到自己的服务器，请看 [自部署 Go 后端](self-host.md)。两种方式的接口和数据库结构相同，之后可以互相迁移。
+
 ## 整体结构
 
 ```
-浏览器 ──► Cloudflare Worker（worker/index.js）
+浏览器 ──► Cloudflare Worker（cloudflare/worker.js）
               ├─ /api/*  → 注册、登录、题库同步 ──► D1 数据库 quiz
               └─ 其他路径 → dist/ 中的静态文件
 ```
 
 | 名称 | 位置 | 作用 |
 | --- | --- | --- |
-| Worker 名称 `quiz` | `wrangler.jsonc` 的 `name` | 决定默认网址 `https://quiz.<你的子域>.workers.dev` |
-| D1 数据库 `quiz` | `wrangler.jsonc` 的 `d1_databases` | 保存用户、登录会话和题目 |
+| Worker 名称 `quiz` | `cloudflare/wrangler.jsonc` 的 `name` | 决定默认网址 `https://quiz.<你的子域>.workers.dev` |
+| D1 数据库 `quiz` | `cloudflare/wrangler.jsonc` 的 `d1_databases` | 保存用户、登录会话和题目 |
 | 绑定 `DB` | 同上 | 代码中通过 `env.DB` 访问数据库，不要修改 |
-| 绑定 `ASSETS` | `wrangler.jsonc` 的 `assets` | 代码中通过 `env.ASSETS` 返回静态文件 |
-| 表结构 | `migrations/*.sql` | 由 Wrangler 按顺序应用到数据库 |
+| 绑定 `ASSETS` | `cloudflare/wrangler.jsonc` 的 `assets` | 代码中通过 `env.ASSETS` 返回静态文件 |
+| 表结构 | `migrations/*.sql` | 由 Wrangler 按顺序应用到数据库；Go 后端也使用这些文件 |
 
 ## 准备工作
 
@@ -29,6 +31,14 @@
    ```
 
 之后所有 `wrangler` 命令都通过 `npx wrangler …` 运行，使用项目内安装的版本。
+
+**Wrangler 的配置文件位于 `cloudflare/wrangler.jsonc`。** 本文中直接使用 `npx wrangler` 的命令（`login`、`whoami` 除外）都请先进入该目录再运行：
+
+```bash
+cd cloudflare
+```
+
+`npm run …` 脚本已经指定了配置文件，可以在项目根目录运行。
 
 ## 第一步：登录 Wrangler
 
@@ -73,7 +83,7 @@ npx wrangler d1 create quiz
 }
 ```
 
-只需要其中的 `database_id`。打开 `wrangler.jsonc`，把占位的 `00000000-0000-0000-0000-000000000000` 替换为这个值，其余字段保持不变。如果 Wrangler 询问是否自动写入配置文件，请检查结果，确认仍然只有一个 `binding` 为 `DB` 的数据库。
+只需要其中的 `database_id`。打开 `cloudflare/wrangler.jsonc`，把占位的 `00000000-0000-0000-0000-000000000000` 替换为这个值，其余字段保持不变。如果 Wrangler 询问是否自动写入配置文件，请检查结果，确认仍然只有一个 `binding` 为 `DB` 的数据库。
 
 `database_id` 不是密钥，可以提交到 Git。
 
@@ -133,7 +143,7 @@ curl https://quiz.你的子域.workers.dev/api/auth/me
 
 1. 确认域名 `aimer.moe` 已托管在 Cloudflare（控制台「网站」列表中能看到，且域名服务器已指向 Cloudflare）。
 2. 在 Cloudflare 的 DNS 设置中，删除 `quiz` 现有的 CNAME 记录（目前指向 GitHub Pages），否则无法绑定。
-3. 在 `wrangler.jsonc` 中加入：
+3. 在 `cloudflare/wrangler.jsonc` 中加入：
 
    ```jsonc
    "routes": [
@@ -150,7 +160,7 @@ curl https://quiz.你的子域.workers.dev/api/auth/me
 
 ## 本地开发
 
-本地开发使用一份独立的本地数据库（保存在 `.wrangler/`），不会影响线上数据：
+本地开发使用一份独立的本地数据库（保存在 `cloudflare/.wrangler/`），不会影响线上数据：
 
 ```bash
 npm run db:migrate:local   # 首次或新增迁移后运行
@@ -176,16 +186,37 @@ npm run cf:dev             # 打开 http://localhost:8787
 - `wrangler rollback` 只回滚代码，不回滚数据库。修改表结构前请先导出备份。
 - 备份文件包含用户名和密码哈希，请妥善保管，不要提交到 Git。
 
+## 迁移到自己的服务器
+
+1. 导出线上数据库（在 `cloudflare/` 目录中运行）：
+
+   ```bash
+   npx wrangler d1 export quiz --remote --output=quiz-backup.sql
+   ```
+
+2. 用 Go 后端导入到新的数据库文件：
+
+   ```bash
+   quiz-server import -db ./data/quiz.db quiz-backup.sql
+   ```
+
+3. 按 [自部署 Go 后端](self-host.md) 启动服务。账户、密码和题目都会保留，用户需要重新登录一次。
+
+反方向（从自己的服务器迁回 Cloudflare）见自部署文档中的「迁移到 Cloudflare」。
+
 ## 常见问题
 
 **部署时报错找不到数据库或 `database_id` 无效**
-`wrangler.jsonc` 中的 `database_id` 仍是占位值，或与 `npx wrangler d1 list` 中的不一致。
+`cloudflare/wrangler.jsonc` 中的 `database_id` 仍是占位值，或与 `npx wrangler d1 list` 中的不一致。
 
 **网页正常，但注册时提示“服务器暂时无法处理请求”**
 通常是线上数据库还没有建表。运行 `npm run db:migrate:remote`，再用 `npx wrangler tail` 查看具体错误。
 
 **右上角没有账户按钮**
 网页没有连接到 Worker 的 `/api/*`。确认打开的是 Cloudflare 的网址而不是 GitHub Pages，并检查 `curl …/api/auth/me` 是否返回 JSON。
+
+**运行 Wrangler 命令时提示找不到配置或数据库 `quiz`**
+没有在 `cloudflare/` 目录中运行。先 `cd cloudflare`，或在命令中加上 `--config cloudflare/wrangler.jsonc`。
 
 **`wrangler login` 后提示没有权限**
 账户下有多个 Cloudflare 账户时，设置 `CLOUDFLARE_ACCOUNT_ID` 指定要使用的账户；使用 API 令牌时，确认令牌包含 Workers 和 D1 的编辑权限。

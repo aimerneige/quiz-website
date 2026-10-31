@@ -1,10 +1,12 @@
 # quiz · 本地答题空间
 
-中、日、英三语答题工具，前端使用原生 HTML、CSS、JavaScript ES modules。可以作为纯静态站点部署（题库保存在浏览器本地），也可以部署到 Cloudflare Workers + D1，支持注册登录并把题库保存到云端。源码维护在 `src/`，构建产物生成到 `dist/`。
+中、日、英三语答题工具，前端使用原生 HTML、CSS、JavaScript ES modules。可以作为纯静态站点部署（题库保存在浏览器本地），也可以接入后端，支持注册登录并把题库保存到云端。后端有两种实现，接口和数据库结构完全相同，可以任选其一并互相迁移：Cloudflare Workers + D1，或在自己的服务器上运行的 Go 程序（SQLite）。源码维护在 `src/`，构建产物生成到 `dist/`。
 
 ## 开发和测试
 
-测试需要 Node.js 22.5 或更高版本（后端测试使用内置的 `node:sqlite` 模拟 D1）。前端和测试没有第三方依赖；只有 Cloudflare 本地开发和部署需要先运行 `npm install` 安装 Wrangler。
+测试需要 Node.js 22.5 或更高版本（Worker 测试使用内置的 `node:sqlite` 模拟 D1）。前端和测试没有第三方依赖；只有 Cloudflare 本地开发和部署需要先运行 `npm install` 安装 Wrangler。
+
+`npm test` 会对两种后端运行同一套接口测试（`tests/api-contract.mjs`）。已安装 Go 1.26+ 时会自动编译并启动 Go 后端参与测试，否则跳过这一部分；Go 自身的单元测试用 `npm run server:test`（即 `go test ./...`）运行。
 
 ```bash
 npm test
@@ -38,36 +40,38 @@ npm run build
 python3 -m http.server 8000 --directory dist
 ```
 
-## 部署到 Cloudflare（账户与云端题库）
+## 部署后端（账户与云端题库）
 
-完整步骤（登录 Wrangler、创建数据库、绑定自定义域名、日常维护和常见问题）见 [docs/cloudflare.md](docs/cloudflare.md)。
+| 方式 | 适合 | 文档 |
+| --- | --- | --- |
+| Cloudflare Workers + D1 | 不想维护服务器；免费套餐通常足够 | [docs/cloudflare.md](docs/cloudflare.md) |
+| 自己的服务器（Go + SQLite） | 已有服务器、内网使用、数据需要留在自己手里 | [docs/self-host.md](docs/self-host.md) |
 
-Cloudflare 部署由一个 Worker 完成：`/api/*` 请求由 `worker/index.js` 处理，其他路径直接返回 `dist/` 中的静态文件。用户、登录会话和题目保存在 D1 数据库中。
+两种后端都同时提供网页和 `/api/*`，前端无需任何配置：能访问到 `/api` 时右上角出现账户按钮，否则保持本地模式。
 
-首次部署：
+**Cloudflare**（详细步骤见文档）：
 
 ```bash
 npm install
 npx wrangler login
-npx wrangler d1 create quiz
-```
-
-把 `d1 create` 输出的 `database_id` 填入 `wrangler.jsonc`，然后：
-
-```bash
+cd cloudflare && npx wrangler d1 create quiz && cd ..
+# 把输出的 database_id 填入 cloudflare/wrangler.jsonc
 npm run cf:deploy
 ```
 
-该命令先把 `migrations/` 中的表结构应用到线上 D1，再构建并发布 Worker。之后每次更新运行同一命令即可；已应用的迁移会自动跳过。如需绑定自定义域名，在 Cloudflare 控制台的 Worker 设置中添加。
+本地调试：`npm run db:migrate:local && npm run cf:dev`，打开 `http://localhost:8787`。
 
-本地开发（使用本地 D1，不影响线上数据）：
+**自己的服务器**（详细步骤见文档）：
 
 ```bash
-npm run db:migrate:local
-npm run cf:dev
+docker compose up -d            # 打开 http://服务器地址:8080
+# 或不用 Docker：
+npm run server:build && ./bin/quiz-server -addr :8080 -db ./data/quiz.db
 ```
 
-然后打开 `http://localhost:8787`。本地数据库保存在 `.wrangler/`，已被 Git 忽略。
+本地调试：`npm run server`，打开 `http://localhost:8080`。
+
+**互相迁移**：`wrangler d1 export` 导出的备份可以用 `quiz-server import` 导入；`quiz-server export` 导出的数据可以用 `wrangler d1 execute --file` 写入 D1。账户密码和题目都会保留。
 
 ### 账户与同步行为
 
@@ -77,6 +81,7 @@ npm run cf:dev
 - 每次修改只上传新增、修改和删除的题目；右上角显示“正在同步 / 已同步 / 同步失败”。同步失败可点击重试；有未同步的修改时关闭页面或退出登录会提示。切回页面时会拉取其他设备上的修改。
 - 用户名为 3–32 位字母、数字、`_`、`.` 或 `-`，不区分大小写；密码 8–128 位，使用 PBKDF2-SHA256（10 万次迭代，独立盐值）存储。
 - 登录状态保存在 30 天有效的 HttpOnly、SameSite=Lax Cookie 中（HTTPS 下带 Secure），数据库只保存其 SHA-256 哈希。写请求校验 `Origin` 并要求 JSON 请求体。
+- 两种后端的密码哈希、Cookie、校验规则和错误码完全一致，由同一套接口测试保证。
 - 每个账户最多 10,000 道题，单题长度限制与本地相同。
 
 ### API
@@ -116,12 +121,19 @@ npm run cf:dev
 | `scripts/build.mjs` | 清理并生成 `dist/` 的构建脚本 |
 | `tests/core.test.mjs` | 核心逻辑测试 |
 | `tests/i18n.test.mjs` | 语言识别、词典完整性、插值和多语言导入校验测试 |
-| `worker/index.js` | Cloudflare Worker：注册登录、会话和题库同步 API，并提供静态文件 |
-| `migrations/` | D1 表结构迁移 |
-| `wrangler.jsonc` | Cloudflare Workers / D1 配置 |
+| `migrations/` | 数据库表结构迁移，Cloudflare D1 与 Go 后端共用 |
+| `cloudflare/worker.js` | Cloudflare Worker：注册登录、会话和题库同步 API，并提供静态文件 |
+| `cloudflare/wrangler.jsonc` | Cloudflare Workers / D1 配置 |
+| `server/` | Go 自部署后端：接口（`server.go`、`auth.go`、`questions.go`）、SQLite 与迁移（`store.go`）、导入导出（`dump.go`） |
+| `server/cmd/quiz-server/` | Go 后端的命令行入口 |
+| `embed.go`、`go.mod` | Go 模块根；把 `src/` 和 `migrations/` 嵌入可执行文件 |
+| `Dockerfile`、`compose.yaml` | 自部署的 Docker 镜像与 Compose 配置 |
 | `docs/cloudflare.md` | 连接并部署到 Cloudflare 的详细说明 |
+| `docs/self-host.md` | 在自己的服务器上部署 Go 后端的详细说明 |
 | `tests/sync.test.mjs` | 云端排序键与增量同步计算测试 |
-| `tests/worker.test.mjs` | 后端 API 测试（使用 `tests/d1-mock.mjs` 模拟 D1） |
+| `tests/api-contract.mjs` | 两种后端共用的接口测试 |
+| `tests/worker.test.mjs` | 用接口测试检查 Worker（`tests/d1-mock.mjs` 模拟 D1） |
+| `tests/go-server.test.mjs` | 编译并启动 Go 后端，用同一套接口测试检查 |
 | `dist/` | 可删除、可重新生成的部署产物，不提交到 Git |
 
 ## 功能
